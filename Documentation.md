@@ -141,7 +141,7 @@ def evaluate(model, test_dataset):
 - **Correct Predictions**: For each batch of images, the model generates predictions, and the function counts the number of correct predictions by comparing them to the actual labels.
 - **Accuracy Calculation**: The accuracy is computed as the ratio of correct predictions to the total number of samples in the test dataset.
 
-### 5. `main.py`
+### 5. `execve.py`
 
 ```python
 import tensorflow as tf
