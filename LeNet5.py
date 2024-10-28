@@ -1,31 +1,31 @@
-# model.py
-
 import torch.nn as nn
 
 class LeNet5(nn.Module):
     def __init__(self):
         super(LeNet5, self).__init__()
-        # Convolutional Layers
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5)  # 1x32x32 -> 6x28x28
-        self.pool1 = nn.AvgPool2d(kernel_size=2, stride=2)  # 6x28x28 -> 6x14x14
-        self.conv2 = nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5)  # 6x14x14 -> 16x10x10
-        self.pool2 = nn.AvgPool2d(kernel_size=2, stride=2)  # 16x10x10 -> 16x5x5
-
-        # Fully Connected Layers
-        self.fc1 = nn.Linear(16 * 5 * 5, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
-
-        # Activation Function
+    
+        self.convLayer1 = nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5) 
+        self.poolLayer1 = nn.AvgPool2d(kernel_size=2, stride=2)  
+        self.convLayer2 = nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5)  
+        self.poolLayer2 = nn.AvgPool2d(kernel_size=2, stride=2)
+        self.fcNLayer1 = nn.Linear(16 * 5 * 5, 120)
+        self.fcNlayer2 = nn.Linear(120, 84)
+        self.fcNlayer3 = nn.Linear(84, 10)
         self.tanh = nn.Tanh()
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
-        x = self.tanh(self.conv1(x))
-        x = self.pool1(x)
-        x = self.tanh(self.conv2(x))
-        x = self.pool2(x)
-        x = x.view(-1, 16 * 5 * 5)  # Flatten
-        x = self.tanh(self.fc1(x))
-        x = self.tanh(self.fc2(x))
-        x = self.fc3(x)
-        return x
+        res = self.convLayer1(x)
+        res = self.tanh(res)
+        res = self.poolLayer1(res)
+        res = self.convLayer2(res)
+        res = self.tanh(res)
+        res = self.poolLayer2(res)
+        flatten = res.view(-1, 16 * 5 * 5)  # Flatten
+        res = self.fcNLayer1(flatten)
+        res = self.tanh(res)
+        res = self.fcNlayer2(res)
+        res = self.tanh(res)
+        res = self.fcNlayer3(res)
+        res = self.softmax(res)
+        return res

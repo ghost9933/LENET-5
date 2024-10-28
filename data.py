@@ -1,5 +1,3 @@
-# data.py
-
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torchvision
@@ -10,14 +8,6 @@ import numpy as np
 
 class MNISTDataset(Dataset):
     def __init__(self, data_path, transform=None):
-        """
-        Custom Dataset for loading MNIST data from .pt files.
-
-        Args:
-            data_path (str): Path to the .pt file (training.pt or test.pt).
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
-        """
         self.data, self.targets = torch.load(data_path)
         self.transform = transform
 
@@ -27,7 +17,7 @@ class MNISTDataset(Dataset):
     def __getitem__(self, idx):
         image, label = self.data[idx], self.targets[idx]
 
-        # Convert to PIL Image for transforms compatibility
+        # Convert for transforms compatibility
         image = transforms.ToPILImage()(image)
 
         if self.transform:
@@ -35,31 +25,62 @@ class MNISTDataset(Dataset):
 
         return image, label
 
-def get_data_loaders(data_dir='./', batch_size=64, test_batch_size=1000):
+def compute_mean_std(dataset):
     """
-    Returns training and testing data loaders for the MNIST dataset.
-
+    Compute the mean and standard deviation of a dataset.
+    
     Args:
-        data_dir (str): Base directory containing 'train' and 'test' folders.
-        batch_size (int): Batch size for training.
-        test_batch_size (int): Batch size for testing.
-
+        dataset (Dataset): PyTorch Dataset.
+        
     Returns:
-        train_loader, test_loader: DataLoader objects for training and testing.
+        mean (float): Mean of the dataset.
+        std (float): Standard deviation of the dataset.
     """
-    # Define transformations
-    transform = transforms.Compose([
-        transforms.Pad(2),  # Pad 28x28 to 32x32
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
+    loader = DataLoader(dataset, batch_size=5000, shuffle=False, num_workers=2, pin_memory=True)
+    mean = 0.0
+    std = 0.0
+    total_samples = 0
+
+    print("Computing mean and standard deviation...")
+    for images, _ in loader:
+        # images shape: (batch_size, 1, 28, 28)
+        batch_samples = images.size(0)
+        images = images.view(batch_samples, -1)  # Flatten to (batch_size, 784)
+        mean += images.mean(1).sum().item()
+        std += images.std(1).sum().item()
+        total_samples += batch_samples
+
+    mean /= total_samples
+    std /= total_samples
+    print(f"Computed Mean: {mean}, Computed Std: {std}")
+    return mean, std
+
+def get_data_loaders(data_dir='./', batch_size=64, test_batch_size=1000):
+    # Initial transform without normalization to compute mean and std
+    initial_transform = transforms.Compose([
+        transforms.Pad(2),  
+        transforms.ToTensor()
     ])
 
     # Paths to the .pt files
-    train_pt_path = './train/MNIST/processed/training.pt'
-    test_pt_path = './test/MNIST/processed/test.pt'
+    train_pt_path = os.path.join(data_dir, 'train', 'MNIST', 'processed', 'training.pt')
+    test_pt_path = os.path.join(data_dir, 'test', 'MNIST', 'processed', 'test.pt')
 
-    # Create Dataset instances
-    train_dataset = MNISTDataset(data_path=train_pt_path, transform=transform)
+    # Create Dataset instances with initial transform
+    train_dataset = MNISTDataset(data_path=train_pt_path, transform=initial_transform)
+
+    # Compute mean and std from the training dataset
+    mean, std = compute_mean_std(train_dataset)
+
+    # Define transform with normalization using computed mean and std
+    transform = transforms.Compose([
+        transforms.Pad(2),  
+        transforms.ToTensor(),
+        transforms.Normalize((mean,), (std,))
+    ])
+
+    # Update the transform for training and testing datasets
+    train_dataset.transform = transform
     test_dataset = MNISTDataset(data_path=test_pt_path, transform=transform)
 
     # Create DataLoader instances
@@ -73,21 +94,40 @@ def get_data_loaders(data_dir='./', batch_size=64, test_batch_size=1000):
     return train_loader, test_loader
 
 def visualize_samples(loader, classes, num_samples=8):
-    """
-    Visualizes a batch of images from the data loader.
-
-    Args:
-        loader (DataLoader): DataLoader object.
-        classes (list): List of class names.
-        num_samples (int): Number of samples to display.
-    """
     def imshow(img):
-        img = img * 0.3081 + 0.1307  # Unnormalize
+        # Retrieve the mean and std used for normalization
+        mean = 0.1307  # Placeholder, will be updated below
+        std = 0.3081   # Placeholder, will be updated below
+
+        # To accurately unnormalize, retrieve mean and std from the loader's dataset
+        dataset = loader.dataset
+        if isinstance(dataset, MNISTDataset):
+            transform = dataset.transform
+            if isinstance(transform, transforms.Compose):
+                # Extract Normalize parameters
+                for t in transform.transforms:
+                    if isinstance(t, transforms.Normalize):
+                        mean = t.mean[0].item()
+                        std = t.std[0].item()
+                        break
+
+        img = img * std + mean  # Unnormalize
         npimg = img.numpy()
         plt.imshow(np.transpose(npimg, (1, 2, 0)), cmap='gray')
+        plt.axis('off')  # Hide axis
         plt.show()
 
     dataiter = iter(loader)
     images, labels = dataiter.next()
     imshow(torchvision.utils.make_grid(images[:num_samples]))
-    print('GroundTruth:', ' '.join(f'{classes[j]}' for j in range(num_samples)))
+    print('GroundTruth:', ' '.join(f'{classes[j]}' for j in labels[:num_samples]))
+
+if __name__ == "__main__":
+    # Example usage
+    train_loader, test_loader = get_data_loaders()
+
+    # Define MNIST classes
+    classes = [str(i) for i in range(10)]
+
+    # Visualize some training samples
+    visualize_samples(train_loader, classes, num_samples=8)

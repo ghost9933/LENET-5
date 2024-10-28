@@ -4,22 +4,6 @@ import torch
 from tqdm import tqdm
 
 def train_model(model, train_loader, criterion, optimizer, device, num_epochs=10, log_interval=100):
-    """
-    Trains the given model.
-
-    Args:
-        model (nn.Module): The neural network to train.
-        train_loader (DataLoader): DataLoader for training data.
-        criterion: Loss function.
-        optimizer: Optimizer.
-        device: Device to run the training on.
-        num_epochs (int): Number of training epochs.
-        log_interval (int): How frequently to log training status.
-
-    Returns:
-        model: Trained model.
-        loss_history (list): List of average losses per epoch.
-    """
     model.train()  # Set model to training mode
     loss_history = []
 

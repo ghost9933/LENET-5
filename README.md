@@ -3,14 +3,20 @@ To create and activate the virtual environment, follow these steps:
 
 1. Create the virtual environment:
     ```sh
-    python -m venv lenet-5
+    python -m venv env
     ```
 
 2. Activate the virtual environment:
     ```sh
-    .\lenet-5\Scripts\activate
+    .\env\Scripts\activate
     ```
 
+3. Install dependencies:
+    ```sh
+    pip install -r requirements.txt
+    ```
 
-install dependencies
-pip install -r requirements.txt
+4. Run the main script:
+    ```sh
+    python main.py
+    ```
